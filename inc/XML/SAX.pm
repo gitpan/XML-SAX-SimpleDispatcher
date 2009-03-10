@@ -1,12 +1,12 @@
 #line 1
-# $Id: SAX.pm,v 1.26 2006/04/23 23:48:31 matt Exp $
+# $Id: SAX.pm,v 1.29 2007/06/27 09:09:12 grant Exp $
 
 package XML::SAX;
 
 use strict;
 use vars qw($VERSION @ISA @EXPORT_OK);
 
-$VERSION = '0.14';
+$VERSION = '0.16';
 
 use Exporter ();
 @ISA = ('Exporter');
@@ -165,11 +165,54 @@ sub add_parser {
 sub save_parsers {
     my $class = shift;
     
+    ### DEBIAN MODIFICATION
+    print "\n";
+    print "Please use 'update-perl-sax-parsers(8) to register this parser.'\n";
+    print "See /usr/share/doc/libxml-sax-perl/README.Debian.gz for more info.\n";
+    print "\n";
+
+    return $class; # rest of the function is disabled on Debian.
+    ### END DEBIAN MODIFICATION
+
     # get directory from wherever XML::SAX is installed
     my $dir = $INC{'XML/SAX.pm'};
     $dir = dirname($dir);
     
     my $file = File::Spec->catfile($dir, "SAX", PARSER_DETAILS);
+    chmod 0644, $file;
+    unlink($file);
+    
+    my $fh = gensym();
+    open($fh, ">$file") ||
+        die "Cannot write to $file: $!";
+
+    foreach my $p (@$known_parsers) {
+        print $fh "[$p->{Name}]\n";
+        foreach my $key (keys %{$p->{Features}}) {
+            print $fh "$key = $p->{Features}{$key}\n";
+        }
+        print $fh "\n";
+    }
+
+    print $fh "\n";
+
+    close $fh;
+
+    return $class;
+}
+
+sub save_parsers_debian {
+    my $class = shift;
+    my ($parser_module,$directory, $priority) = @_;
+
+    # add parser
+    $known_parsers = [];
+    $class->add_parser($parser_module);
+    
+    # get parser's ParserDetails file
+    my $file = $parser_module;
+    $file = "${priority}-$file" if $priority != 0;
+    $file = File::Spec->catfile($directory, $file);
     chmod 0644, $file;
     unlink($file);
     
@@ -201,5 +244,5 @@ sub do_warn {
 1;
 __END__
 
-#line 374
+#line 421
 
